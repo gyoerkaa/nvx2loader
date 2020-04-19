@@ -23,7 +23,7 @@ bl_info = {
     "name": "nvx2loader",
     "author": "Attila Gyoerkoes",
     'version': (1, 0),
-    "blender": (2, 7, 2),
+    "blender": (2, 8, 0),
     "location": "File > Import-Export",
     "description": "Import Nebula NVX files",
     "warning": "",
