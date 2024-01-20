@@ -4,7 +4,7 @@ import os
 import struct
 
 import bpy
-import bpy_extras
+import bpy_extras.image_utils
 from bpy_extras.io_utils import unpack_list
 from bpy_extras.io_utils import unpack_face_list
 
