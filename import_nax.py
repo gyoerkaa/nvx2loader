@@ -9,6 +9,9 @@ from . import nax2
 from . import nax3
 
 
+default_options = {"target_object" : None}
+
+
 def create_anims(context, nax_groups, nax_keys, nax_curves):
     """TODO: DOC"""
     scene = bpy.context.scene
@@ -91,8 +94,7 @@ def load_nax3(context, filepath):
     return {'FINISHED'}
 
 
-def load(context,
-         filepath=''):
+def load(context, options, filepath=''):
     """Called by the user interface or another script."""
     # only nax2, nax3 seems to be unimplemented
     load_nax2(context, filepath)

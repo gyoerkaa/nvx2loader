@@ -5,6 +5,7 @@ import collections
 from enum import IntEnum
 
 class VertexComponentMask(IntEnum):
+    """TODO: DOC"""
     Coord = 1 << 0
     Normal = 1 << 1
     NormalUB4N = 1 << 2
@@ -28,8 +29,7 @@ class VertexComponentMask(IntEnum):
     JIndicesUB4 = 1 << 20
 
 
-VertexComponentData = collections.namedtuple('VertexComponent',
-                                             'format count size')
+VertexComponentData = collections.namedtuple('VertexComponent', 'format count size')
 VertexComponents = {
             VertexComponentMask.Coord:        VertexComponentData('3f', 3, 4),
             VertexComponentMask.Normal:       VertexComponentData('3f', 3, 4),
