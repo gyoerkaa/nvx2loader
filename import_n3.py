@@ -6,6 +6,8 @@ import bpy
 import bpy_extras.image_utils
 
 from . import n3
+from . import nvx2
+from . import import_nvx2
 
 
 def find_dir(start_dir, dirname_to_search_for):
@@ -21,7 +23,7 @@ def find_dir(start_dir, dirname_to_search_for):
     return ""
 
 
-def create_armature_object(am_name, n3joints, collection):
+def create_armature(am_name, n3joints, collection):
     """Create an armutre from a list of n3 node definitions."""
     # n3joints = list of (joint_idx, parent_idx, translation, rotation, scale, name)
 
@@ -34,10 +36,9 @@ def create_armature_object(am_name, n3joints, collection):
 
 def create_image(n3_texture_res, options: n3.Options):
     """Helper function to load image files into blender images."""
-    tex_path = n3_texture_res[3:]
-    tex_dir, tex_name = os.path.split(tex_path)
+    img_path = n3_texture_res[4:]
+    img_dir, img_name = os.path.split(img_path)
 
-    img_name = tex_name
     possible_paths_list = []
 
     # Attempt to find existing blender image
@@ -47,7 +48,7 @@ def create_image(n3_texture_res, options: n3.Options):
     # Case 1: Texture is in same directory as the n3file
     n3_path = options.n3filepath
     n3_dir, _ = os.path.split(n3_path)
-    possible_path = os.path.join(n3_dir, tex_name)
+    possible_path = os.path.join(n3_dir, img_name)
     possible_paths_list.append(possible_path)
 
     # Case 2: Search in typical nebula project structure
@@ -56,9 +57,10 @@ def create_image(n3_texture_res, options: n3.Options):
     # root/meshes/... => nvx2 files
     # root/textures/... => textures (WE WANT THIS)
     project_tex_dir = find_dir(n3_dir, "textures")
-    possible_path = os.path.join(project_tex_dir, tex_dir)
+    possible_path = os.path.join(project_tex_dir, img_dir)
+    possible_path = os.path.normpath(possible_path)
     if os.path.isdir(possible_path):
-        possible_path = os.path.join(possible_path, tex_name)
+        possible_path = os.path.join(possible_path, img_name)
         possible_paths_list.append(possible_path)
 
     # Attempt to load one of the images in path list
@@ -153,12 +155,11 @@ def create_material(material_name, texture_list, options: n3.Options):
     return blen_material
 
 
-def import_nvx2_mesh(n3_mesh_res, collection, options: n3.Options):
+def import_nvx2_mesh(n3_mesh_res, context, options: n3.Options):
     """Create a blender object from an nvx2 mesh file."""
-    nvx2_path = n3_mesh_res[3:]
+    nvx2_path = n3_mesh_res[4:]
     nvx2_dir, nvx2_name = os.path.split(nvx2_path)
 
-    obj_name = nvx2_name
     possible_paths_list = []
 
     # Case 1: Mesh is in same directory as the n3file
@@ -174,6 +175,7 @@ def import_nvx2_mesh(n3_mesh_res, collection, options: n3.Options):
     # root/textures/... => textures
     project_mesh_dir = find_dir(n3_dir, "meshes")
     possible_path = os.path.join(project_mesh_dir, nvx2_dir)
+    possible_path = os.path.normpath(possible_path)
     if os.path.isdir(possible_path):
         possible_path = os.path.join(possible_path, nvx2_name)
         possible_paths_list.append(possible_path)
@@ -182,8 +184,13 @@ def import_nvx2_mesh(n3_mesh_res, collection, options: n3.Options):
     # One is enough!
     blen_object = None
     for pp in possible_paths_list:
-        # TODO: Use the nvx2loader to load models
         print(pp)
+        nvx2options = nvx2.Options()
+        nvx2options.nvx2filepath = pp
+        if import_nvx2.load(context, nvx2options) == {'FINISHED'}:
+            print("found!")
+            return blen_object
+
     return blen_object
 
 
@@ -194,8 +201,8 @@ def load(context, operator, options: n3.Options):
     operator.report({'INFO'}, "Parsing Complete. Output written to console.")
 
     # Loop through nodes and create stuff
-    # TODO: This is acutally a tree structure, need to adjust for it
-    #       after everything is halfway working
+    # TODO: This is actually a tree structure, need to adjust for it
+    #       after everything is halfway working (will also fix material names)
     scene = context.scene
     collection = scene.collection
     for n3node in n3parser.n3node_list:
@@ -203,7 +210,7 @@ def load(context, operator, options: n3.Options):
         if options.import_meshes and n3node.mesh_ressource_id:
             mesh_filepath = n3node.mesh_ressource_id
             blen_object = import_nvx2_mesh(mesh_filepath,
-                                           collection,
+                                           context,
                                            options)
         # Create material
         if options.create_materials and n3node.shader_textures:
@@ -214,8 +221,8 @@ def load(context, operator, options: n3.Options):
                 blen_object.data.materials.append(blen_material)
         # Create armature
         if options.create_armatures and n3node.joints:
-            create_armature_object(n3node.node_name+"_armature",
-                                   n3node.joints,
-                                   collection)
+            create_armature(n3node.node_name+"_armature",
+                            n3node.joints,
+                            collection)
 
     return {'FINISHED'}
