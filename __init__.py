@@ -24,7 +24,8 @@ import bpy_extras
 
 from . import import_nvx2
 from . import import_nax
-
+from . import n3
+from . import import_n3
 
 # Enables the use of reloading the entire addon without restarting blender
 if 'bpy' in locals():
@@ -36,6 +37,8 @@ if 'bpy' in locals():
         # reload main modules
         importlib.reload(import_nvx2)
         importlib.reload(import_nax)
+        importlib.reload(n3)
+        importlib.reload(import_n3)
 
 
 bl_info = {
@@ -116,25 +119,66 @@ class ImportNAX(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         return import_nax.load(context, options, self.filepath)
 
 
+class ImportN3(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+    """Load a Nebula N3 File"""
+    bl_idname = "import_scene.n3"
+    bl_label = "Import N3"
+    bl_options = {'UNDO'}
+
+    filename_ext = ".n3"
+    filter_glob : bpy.props.StringProperty(
+            default="*.n3",
+            options={'HIDDEN'})
+
+    ignore_version : bpy.props.BoolProperty(
+            name="Ignore Version",
+            description="Ignore file version",
+            default=True)
+    create_armatures : bpy.props.BoolProperty(
+            name="Create Armatures",
+            description="Create Armatures from n3 node data",
+            default=True)
+    create_materials : bpy.props.BoolProperty(
+            name="Create Materials",
+            description="Create Materials from n3 node data",
+            default=True)
+    import_meshes : bpy.props.BoolProperty(
+            name="Import Meshes",
+            description="Atempt to import nvx2 meshes from references",
+            default=True)
+
+    def execute(self, context):
+        options = n3.DEFAULT_OPTIONS
+        options["ignore_version"]  = self.ignore_version
+        options["create_armatures"]  = self.create_armatures
+        options["create_materials"]  = self.create_materials
+        options["import_meshes"]  = self.import_meshes
+
+        return import_n3.load(context, self, options, self.filepath)
+
+
 def menu_func_import(self, context):
-    """TODO:Doc."""
+    """Add menu functions for importing nebula files."""
     self.layout.operator(ImportNVX2.bl_idname, text="Nebula mesh (.nvx2)")
-    # self.layout.operator(ImportNAX.bl_idname, text="Nebula animation (.nax2, .nax3)")
+    #self.layout.operator(ImportNAX.bl_idname, text="Nebula animation (.nax2, .nax3)")
+    self.layout.operator(ImportN3.bl_idname, text="Nebula model (.n3)")
 
 
 def register():
-    """TODO:Doc."""
+    """Register all operators and menu entries."""
     bpy.utils.register_class(ImportNVX2)
-    bpy.utils.register_class(ImportNAX)
+    #bpy.utils.register_class(ImportNAX)
+    bpy.utils.register_class(ImportN3)
 
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 
 def unregister():
-    """TODO:Doc."""
+    """Unregister all operators and menu entries."""
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
-    bpy.utils.unregister_class(ImportNAX)
+    bpy.utils.unregister_class(ImportN3)
+    #bpy.utils.unregister_class(ImportNAX)
     bpy.utils.unregister_class(ImportNVX2)
 
 
