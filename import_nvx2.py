@@ -241,7 +241,12 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, options: 
 def load(context, options: nvx2.Options):
     """Called by the user interface or another script."""
     filepath = options.nvx2filepath
-    with open(filepath, mode='rb') as f:
+    #with open(filepath, mode='rb') as f:
+    try:
+        f = open(filepath, mode='rb')
+    except FileNotFoundError:
+        return {'CANCELLED'}
+    else:
         filename = os.path.splitext(os.path.split(filepath)[1])[0]
         scene = context.scene
         collection = scene.collection
