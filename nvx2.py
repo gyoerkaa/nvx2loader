@@ -1,7 +1,18 @@
-"""TODO: DOC"""
+"""Library for Parsing Nebula nvx2 files"""
 
 import collections
 from enum import IntEnum
+from dataclasses import dataclass
+
+
+@dataclass
+class Options:
+    """N3 options."""
+    use_smooth: bool = False
+    use_mesh_validation: bool = True
+    create_parent_empty: bool = True
+    create_weights: bool = True
+    create_colors: bool = False
 
 
 class VertexComponentMask(IntEnum):

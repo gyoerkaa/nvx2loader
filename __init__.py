@@ -22,6 +22,7 @@
 import bpy
 import bpy_extras
 
+from . import nvx2
 from . import import_nvx2
 from . import import_nax
 from . import n3
@@ -31,10 +32,9 @@ from . import import_n3
 if 'bpy' in locals():
     # Doing this in here: Importing this twice will result in an error
     import importlib
-    # Checking for import_nvx2 is enough, if present: Already loaded,
-    # explicity reload
-    if 'import_nvx2' in locals():
-        # reload main modules
+    # Checking for nvx2 is enough, if present: Everything is loaded, reload
+    if 'nvx2' in locals():
+        importlib.reload(nvx2)
         importlib.reload(import_nvx2)
         importlib.reload(import_nax)
         importlib.reload(n3)
@@ -82,13 +82,15 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             default=False)
 
     def execute(self, context):
-        options = import_nvx2.default_options
-        options["use_smooth"] = self.use_smooth
-        options["create_parent_empty"]  = self.create_parent_empty
-        options["create_weights"]  = self.create_weights
-        options["create_colors"]  = self.create_colors
+        options = nvx2.Options()
+        options.use_smooth = self.use_smooth
+        options.create_parent_empty  = self.create_parent_empty
+        options.create_weights  = self.create_weights
+        options.create_colors = self.create_colors
 
-        return import_nvx2.load(context, options, self.filepath)
+        options.nvx2filepath = self.filepath
+
+        return import_nvx2.load(context, options)
 
 
 class ImportNAX(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):

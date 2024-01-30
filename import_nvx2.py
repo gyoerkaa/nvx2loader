@@ -4,23 +4,10 @@ import os
 import struct
 
 import bpy
-import bpy_extras.image_utils
 from bpy_extras.io_utils import unpack_list
 #from bpy_extras.io_utils import unpack_face_list
 
 from . import nvx2
-
-
-texture_suffix = {"diffuse" : "_color",
-                  "specular" : "_spec",
-                  "bump" : "_bump"}
-
-
-default_options = {"use_smooth" : False,
-                   "use_mesh_validation": True,
-                   "create_parent_empty": True,
-                   "create_weights": True,
-                   "create_colors": False}
 
 
 def fps2float(n):
@@ -190,7 +177,7 @@ def create_weights(blen_object, nvx2_weights, nvx2_weight_idx):
         print('created_groups='+str(created_groups))
 
 
-def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_name, options):
+def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, options: nvx2.Options):
     """Create a mesh for use with an blender object."""
     blen_mesh = bpy.data.meshes.new('nvx2_mesh')
     # Add vertices
@@ -209,7 +196,7 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_
 
     num_blen_polygons = len(blen_mesh.polygons)
 
-    if options["use_smooth"]:
+    if options.use_smooth:
         blen_mesh.polygons.foreach_set('use_smooth', [True] * num_blen_polygons)
 
     # Add texture coordinates
@@ -222,7 +209,7 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_
             uv_layer.name = "nvx2_uv"+str(uv_idx)
             uv_layer.data.foreach_set('uv', face_uv_coords[:2*len(uv_layer.data)])
 
-    if options['create_colors'] and nvx2_colors:
+    if options.create_colors and nvx2_colors:
         blen_colors = blen_mesh.vertex_colors.new("nvx2_colors")
         # Get all loops for each vertex
         vert_loop_map = {}
@@ -238,21 +225,22 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_
         if color_dim > 3:
             for vidx in vert_loop_map:
                 for lidx in vert_loop_map[vidx]:
-                    blen_colors.data[lidx].color = (nvx2_colors[vidx][0:4])
+                    blen_colors.data[lidx].color = nvx2_colors[vidx][0:4]
         else:  # Keep the right way separate for speed
             for vidx in vert_loop_map:
                 for lidx in vert_loop_map[vidx]:
                     blen_colors.data[lidx].color = nvx2_colors[vidx][0:3]
 
-    if options["use_mesh_validation"]:
+    if options.use_mesh_validation:
         blen_mesh.validate(verbose=True, clean_customdata=False)
 
     blen_mesh.update()
     return blen_mesh
 
 
-def load(context, options, filepath=''):
+def load(context, options: nvx2.Options):
     """Called by the user interface or another script."""
+    filepath = options.nvx2filepath
     with open(filepath, mode='rb') as f:
         filename = os.path.splitext(os.path.split(filepath)[1])[0]
         scene = context.scene
@@ -277,7 +265,7 @@ def load(context, options, filepath=''):
                       for i in range(header.num_triangles)]
 
         parent_empty = None
-        if options["create_parent_empty"]:
+        if options.create_parent_empty:
             parent_empty = bpy.data.objects.new(filename, None)
             parent_empty.location = (0.0, 0.0, 0.0)
             collection.objects.link(parent_empty)
@@ -293,10 +281,9 @@ def load(context, options, filepath=''):
             grp_uvs = [uvl[gvf:gvf+g.vertex_count] for uvl in nvx2_uvlayers]
             grp_colors = nvx2_colors[gvf:gvf+g.vertex_count]
             # Create the blender objects
-            grp_mat_name = filename+str(i) if (i>0) else filename
-            mesh = create_mesh(grp_verts, grp_faces, grp_uvs, grp_colors, grp_mat_name, options)
+            mesh = create_mesh(grp_verts, grp_faces, grp_uvs, grp_colors, options)
             obj = bpy.data.objects.new('nvx2_object', mesh)
-            if options["create_weights"] and nvx2_weights and nvx2_weight_idx:
+            if options.create_weights and nvx2_weights and nvx2_weight_idx:
                 create_weights(obj,
                                nvx2_weights[gvf:gvf+g.vertex_count],
                                nvx2_weight_idx[gvf:gvf+g.vertex_count])
