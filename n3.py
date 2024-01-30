@@ -3,12 +3,21 @@
 import struct
 from dataclasses import dataclass, field
 
+
 SUPPORTED_VERSIONS = {1, 2}
 
-DEFAULT_OPTIONS = {"ignore_version" : True,
-                   "create_armatures" : True,
-                   "create_materials" : True,
-                   "import_meshes": True}
+
+@dataclass
+class Options:
+    """N3 options."""
+    ignore_version: bool = True
+    create_armatures: bool = True
+    create_materials: bool = True
+    reuse_materials: bool = False
+    reuse_images: bool = True
+    use_image_search: bool = False
+    import_meshes: bool = True
+    n3filepath: str = ""
 
 
 @dataclass
@@ -31,7 +40,7 @@ class Node:
     # state node params
     material_string : str = ""  # DEPRECATED
     material_name: str = ""
-    shader_textures: list = field(default_factory=list)
+    shader_textures: dict = field(default_factory=dict)
     shader_parameters: dict = field(default_factory=dict)
     # shape node params
     mesh_ressource_id: str = ""
@@ -228,9 +237,8 @@ class Parser():
             tex_type = self.read_n3_string()
             tex_name = self.read_n3_string()
 
-            new_texture = (tex_type, tex_name)
-            node.shader_textures.append(new_texture)
-            print("        new_texture=" + str(new_texture))
+            node.shader_textures[tex_type] = tex_name
+            print("        new_texture=" + str(node.shader_textures[tex_type]))
         elif tag_4cc == 'SINT':
             # Shader int param
             pname = self.read_n3_string()

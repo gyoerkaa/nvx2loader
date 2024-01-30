@@ -142,19 +142,31 @@ class ImportN3(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             name="Create Materials",
             description="Create Materials from n3 node data",
             default=True)
+    reuse_materials : bpy.props.BoolProperty(
+            name="Re-use Materials",
+            description="Re-uses materials with the same name instead of creating new ones",
+            default=False)
+    use_image_search : bpy.props.BoolProperty(
+            name="Image Search",
+            description="Searches subdirs for any associated images (Warning, may be slow)",
+            default=False)
     import_meshes : bpy.props.BoolProperty(
             name="Import Meshes",
             description="Atempt to import nvx2 meshes from references",
             default=True)
 
     def execute(self, context):
-        options = n3.DEFAULT_OPTIONS
-        options["ignore_version"]  = self.ignore_version
-        options["create_armatures"]  = self.create_armatures
-        options["create_materials"]  = self.create_materials
-        options["import_meshes"]  = self.import_meshes
+        options = n3.Options
+        options.ignore_version = self.ignore_version
+        options.create_armatures = self.create_armatures
+        options.create_materials = self.create_materials
+        options.import_meshes = self.import_meshes
+        options.reuse_materials = self.reuse_materials
+        options.use_image_search = self.use_image_search
 
-        return import_n3.load(context, self, options, self.filepath)
+        options.n3filepath = self.filepath
+
+        return import_n3.load(context, self, options)
 
 
 def menu_func_import(self, context):
