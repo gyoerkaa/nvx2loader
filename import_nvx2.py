@@ -1,4 +1,4 @@
-"""TODO: DOC"""
+"""Library to import nvx2 model files"""
 
 import os
 import struct
@@ -271,15 +271,18 @@ def create_weights(blen_object, nvx2_weights, nvx2_weight_idx):
     if nvx2_weights and nvx2_weight_idx:
         # Every vertex may have up to four weights
         # TODO: Find out why the weight index is a float? (which bone the weight belongs to)
+        created_groups = 0
         for vert_id, (weight_list, index_list) in enumerate(zip(nvx2_weights, nvx2_weight_idx)):
             for weight, weight_idx in zip(weight_list, index_list):
-                vgroup_name = f"nvx2_{weight_idx:.3f}"
+                vgroup_name = "nvx2_"+str(weight_idx)
                 if vgroup_name in blen_object.vertex_groups:
                     vgroup = blen_object.vertex_groups[vgroup_name]
                 else:
                     vgroup = blen_object.vertex_groups.new(name=vgroup_name)
+                    created_groups += 1
 
                 vgroup.add([vert_id], weight, 'REPLACE')
+        print('created_groups='+str(created_groups))
 
 
 def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_name, options):

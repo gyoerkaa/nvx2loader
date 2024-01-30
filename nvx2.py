@@ -1,11 +1,11 @@
 """TODO: DOC"""
 
 import collections
-#import enum
 from enum import IntEnum
 
+
 class VertexComponentMask(IntEnum):
-    """TODO: DOC"""
+    """Indicates presents of certain vertex data"""
     Coord = 1 << 0
     Normal = 1 << 1
     NormalUB4N = 1 << 2
