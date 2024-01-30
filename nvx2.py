@@ -13,6 +13,7 @@ class Options:
     create_parent_empty: bool = True
     create_weights: bool = True
     create_colors: bool = False
+    nvx2filepath: str = ""
 
 
 class VertexComponentMask(IntEnum):
