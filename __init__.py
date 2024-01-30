@@ -64,14 +64,6 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     filename_ext = ".nvx2"
     filter_glob : bpy.props.StringProperty(default="*.nvx2", options={'HIDDEN'})
 
-    reuse_materials : bpy.props.BoolProperty(
-            name="Re-use Materials",
-            description="Re-uses materials with the same name instead of creating new ones",
-            default=False)
-    use_image_search : bpy.props.BoolProperty(
-            name="Image Search",
-            description="Searches subdirs for any associated images (Warning, may be slow)",
-            default=False)
     use_smooth : bpy.props.BoolProperty(
             name="Use Smooth",
             description="Sets all polygons to smooth",
@@ -91,9 +83,6 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
     def execute(self, context):
         options = import_nvx2.default_options
-        options["reuse_materials"]  = self.reuse_materials
-        options["reuse_textures"]  = self.reuse_materials
-        options["use_image_search"] = self.use_image_search
         options["use_smooth"] = self.use_smooth
         options["create_parent_empty"]  = self.create_parent_empty
         options["create_weights"]  = self.create_weights

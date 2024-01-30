@@ -16,11 +16,7 @@ texture_suffix = {"diffuse" : "_color",
                   "bump" : "_bump"}
 
 
-default_options = {"reuse_materials" : False,
-                   "reuse_images" : True,
-                   "alt_texture_paths" : [],
-                   "use_image_search": False,
-                   "use_smooth" : False,
+default_options = {"use_smooth" : False,
                    "use_mesh_validation": True,
                    "create_parent_empty": True,
                    "create_weights": True,
@@ -175,97 +171,6 @@ def unpack_vertexdata(vertices, vertex_components):
     return vert_coords, vert_uvs, vert_weights, vert_weight_idx, vert_colors
 
 
-def create_image(img_name, options):
-    """Helper function to load image files into blender images."""
-    if options["reuse_images"] and img_name in bpy.data.images:
-        return bpy.data.images[img_name]
-
-    img_path_list = [""] + options["alt_texture_paths"]
-    img = None
-    for img_path in img_path_list:
-        img = bpy_extras.image_utils.load_image(img_name + '.dds',
-                                                img_path,
-                                                recursive=options["use_image_search"],
-                                                place_holder=False,
-                                                ncase_cmp=True)
-        if img:
-            break
-
-    # Create dummy image, if none was found
-    if img:
-        img.name = img_name
-    else:
-        print('WARNING: Could not load image ' + img_name)
-        img = bpy.data.images.new(img_name, 512, 512)
-
-    return img
-
-
-def create_material(material_name, options):
-    """Creates a blender material."""
-
-    # Try to re-use existing material with the same name
-    if options["reuse_materials"] and material_name in bpy.data.materials:
-        return bpy.data.materials[material_name]
-
-    # Create new material
-    blen_material = bpy.data.materials.new(material_name)
-    blen_material.use_nodes = True
-    blen_material.node_tree.nodes.clear()
-    nodes = blen_material.node_tree.nodes
-    links = blen_material.node_tree.links
-
-    # Create an output node
-    node_out = nodes.new('ShaderNodeOutputMaterial')
-    node_out.label = "nvx2_output"
-    node_out.location = (936, 577)
-
-    # Create shader node
-    node_shader = nodes.new('ShaderNodeBsdfPrincipled')
-    node_shader.name = 'shader_bsdf'
-    node_shader.location = (-81, 552)
-    # Connect to output
-    links.new(node_out.inputs[0], node_shader.outputs[0])
-
-    # Create Diffuse texture node
-    node_diff_tex = nodes.new('ShaderNodeTexImage')
-    node_diff_tex.label = "Texture: Diffuse"
-    node_diff_tex.name = "nvx2_tex_diffuse"
-    node_diff_tex.location = (-2000, 763)
-    node_diff_tex.image = create_image(material_name+texture_suffix["diffuse"], options)
-    node_diff_tex.image.colorspace_settings.name = 'sRGB'
-    # Connect to shader
-    links.new(node_shader.inputs['Alpha'], node_diff_tex.outputs['Alpha'])
-    links.new(node_shader.inputs['Base Color'], node_diff_tex.outputs['Color'])
-
-    # Create specular texture node
-    node_spec_tex = nodes.new('ShaderNodeTexImage')
-    node_spec_tex.label = "Texture: Specular"
-    node_spec_tex.name = "nvx2_tex_specular"
-    node_spec_tex.location = (-1373, 371)
-    node_spec_tex.image = create_image(material_name+texture_suffix["specular"], options)
-    node_spec_tex.image.colorspace_settings.name = 'Non-Color'
-    # Connect to shader
-    links.new(node_shader.inputs[13], node_spec_tex.outputs['Color'])
-
-    # Create Normal/Bump node
-    node_bump = nodes.new('ShaderNodeBump')
-    node_bump.name = "nvx2_bump"
-    node_bump.location = (-384, -232)
-    node_bump.invert = True
-    links.new(node_shader.inputs['Normal'], node_bump.outputs['Normal'])
-    # Create bump texture node
-    node_bump_tex = nodes.new('ShaderNodeTexImage')
-    node_bump_tex.label = "Texture: Bump"
-    node_bump_tex.name = "nvx2_tex_bump"
-    node_bump_tex.location = (-940, -429)
-    node_bump_tex.image = create_image(material_name+texture_suffix["bump"], options)
-    node_bump_tex.image.colorspace_settings.name = 'Non-Color'
-    links.new(node_bump.inputs['Height'], node_bump_tex.outputs['Color'])
-
-    return blen_material
-
-
 def create_weights(blen_object, nvx2_weights, nvx2_weight_idx):
     """Adds vertex groups to an blender object."""
     if nvx2_weights and nvx2_weight_idx:
@@ -306,11 +211,6 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, nvx2_mat_
 
     if options["use_smooth"]:
         blen_mesh.polygons.foreach_set('use_smooth', [True] * num_blen_polygons)
-
-    # Create material
-    material = create_material(nvx2_mat_name, options)
-    if material:
-        blen_mesh.materials.append(material)
 
     # Add texture coordinates
     for uv_idx, uv_data in enumerate(nvx2_uvlayers):
