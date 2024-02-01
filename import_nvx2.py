@@ -272,11 +272,12 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, options: 
 def load(context, operator, options: nvx2.Options):
     """Called by the user interface or another script."""
     filepath = options.nvx2filepath
+    filename = os.path.splitext(os.path.split(filepath)[1])[0]
     try:
         f = open(filepath, mode='rb')
     except FileNotFoundError:
-        operator.report({'ERROR'}, "File not found.")
-        print("File not found.")
+        operator.report({'ERROR'}, "File " + filename + " not found.")
+        print("File not found: '" + filepath + "'")
         return {'CANCELLED'}
     except PermissionError:
         operator.report({'ERROR'}, "Insufficient permissions to access file.")
@@ -284,7 +285,6 @@ def load(context, operator, options: nvx2.Options):
         return {'CANCELLED'}
     else:
         with f:
-            filename = os.path.splitext(os.path.split(filepath)[1])[0]
             scene = context.scene
             collection = scene.collection
 

@@ -4,6 +4,7 @@ import os
 import pathlib
 import bpy
 import bpy_extras.image_utils
+import mathutils
 
 from . import n3
 from . import nvx2
@@ -23,14 +24,40 @@ def find_dir(start_dir, dirname_to_search_for):
     return ""
 
 
-def create_armature(am_name, n3joints, collection):
-    """Create an armutre from a list of n3 node definitions."""
+def create_armature(am_name, n3joints, context, collection):
+    """Create an armature from a list of n3 node definitions."""
     # n3joints = list of (joint_idx, parent_idx, translation, rotation, scale, name)
+    # indices start at 0
+    # parent_idx = -1 means no parent
 
     am = bpy.data.armatures.new(am_name)
-    # TODO: Create bones
     ob = bpy.data.objects.new(am_name, am)
     collection.objects.link(ob)
+
+    """
+    context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    created_bones = {}
+    for joint_idx, joint_parent_idx, translation, rotation, scale, joint_name in n3joints:
+        bone = am.edit_bones.new(joint_name)
+
+        created_bones[joint_idx] = bone
+        if joint_parent_idx >= 0:
+            bone.parent = created_bones[joint_parent_idx]
+
+            bone.head = bone.parent.tail + mathutils.Vector(translation[:3])
+        else:
+            bone.parent = None
+
+        bone.tail = bone.head + mathutils.Vector(translation[:3])
+
+    am.edit_bones.update()
+    context.evaluated_depsgraph_get().update()
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    ob.update_from_editmode()
+    """
     return ob
 
 
@@ -155,7 +182,7 @@ def create_material(material_name, texture_list, options: n3.Options):
     return blen_material
 
 
-def import_nvx2_mesh(n3_mesh_res, context, options: n3.Options):
+def import_nvx2_mesh(context, operator, n3_mesh_res, options: n3.Options):
     """Create a blender object from an nvx2 mesh file."""
     nvx2_path = n3_mesh_res[4:]
     nvx2_dir, nvx2_name = os.path.split(nvx2_path)
@@ -184,11 +211,9 @@ def import_nvx2_mesh(n3_mesh_res, context, options: n3.Options):
     # One is enough!
     blen_object = None
     for pp in possible_paths_list:
-        print(pp)
         nvx2options = nvx2.Options()
         nvx2options.nvx2filepath = pp
-        if import_nvx2.load(context, nvx2options) == {'FINISHED'}:
-            print("found!")
+        if import_nvx2.load(context, operator, nvx2options) == {'FINISHED'}:
             return blen_object
 
     return blen_object
@@ -209,8 +234,9 @@ def load(context, operator, options: n3.Options):
         # Create mesh
         if options.import_meshes and n3node.mesh_ressource_id:
             mesh_filepath = n3node.mesh_ressource_id
-            blen_object = import_nvx2_mesh(mesh_filepath,
-                                           context,
+            blen_object = import_nvx2_mesh(context,
+                                           operator,
+                                           mesh_filepath,
                                            options)
         # Create material
         if options.create_materials and n3node.shader_textures:
@@ -223,6 +249,7 @@ def load(context, operator, options: n3.Options):
         if options.create_armatures and n3node.joints:
             create_armature(n3node.node_name+"_armature",
                             n3node.joints,
+                            context,
                             collection)
 
     return {'FINISHED'}
