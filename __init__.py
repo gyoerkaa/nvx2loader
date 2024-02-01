@@ -64,6 +64,13 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     filename_ext = ".nvx2"
     filter_glob : bpy.props.StringProperty(default="*.nvx2", options={'HIDDEN'})
 
+    nvx2_version : bpy.props.EnumProperty(
+            name="Engine Version",
+            description="Nebula Engine version this file was packed for",
+            items=(('0', "Auto Detect", "", 0),
+                   ('2', "Nebula 2", "", 2),
+                   ('3', "Nebula 3", "", 3)),
+            default='0')
     use_smooth : bpy.props.BoolProperty(
             name="Use Smooth",
             description="Sets all polygons to smooth",
@@ -71,6 +78,10 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     create_parent_empty : bpy.props.BoolProperty(
             name="Create Parent Empty",
             description="Creates an empty to which all imported objects will be parented to",
+            default=True)
+    create_uvs : bpy.props.BoolProperty(
+            name="Create UV maps",
+            description="Creates uv maps",
             default=True)
     create_weights : bpy.props.BoolProperty(
             name="Create Vertex Weights",
@@ -85,10 +96,12 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         options = nvx2.Options()
         options.use_smooth = self.use_smooth
         options.create_parent_empty  = self.create_parent_empty
+        options.create_uvs  = self.create_uvs
         options.create_weights  = self.create_weights
         options.create_colors = self.create_colors
 
         options.nvx2filepath = self.filepath
+        options.nvx2version = int(self.nvx2_version)
 
         return import_nvx2.load(context, self, options)
 
