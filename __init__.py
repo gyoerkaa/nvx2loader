@@ -90,7 +90,7 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         options.nvx2filepath = self.filepath
 
-        return import_nvx2.load(context, options)
+        return import_nvx2.load(context, self, options)
 
 
 class ImportNAX(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):

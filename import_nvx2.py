@@ -238,63 +238,82 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, options: 
     return blen_mesh
 
 
-def load(context, options: nvx2.Options):
+def load(context, operator, options: nvx2.Options):
     """Called by the user interface or another script."""
     filepath = options.nvx2filepath
     #with open(filepath, mode='rb') as f:
     try:
         f = open(filepath, mode='rb')
     except FileNotFoundError:
+        operator.report({'ERROR'}, "File not found.")
+        print("File not found.")
+        return {'CANCELLED'}
+    except PermissionError:
+        operator.report({'ERROR'}, "Insufficient permissions to access file.")
+        print("Insufficient permissions to access file.")
         return {'CANCELLED'}
     else:
-        filename = os.path.splitext(os.path.split(filepath)[1])[0]
-        scene = context.scene
-        collection = scene.collection
+        with f:
+            filename = os.path.splitext(os.path.split(filepath)[1])[0]
+            scene = context.scene
+            collection = scene.collection
 
-        # Read header
-        header = nvx2.Header._make(struct.unpack('<4s6i', f.read(28)))
-        vertex_fmt = make_vertexformat(header.vertex_components)
-        vertex_size = struct.calcsize(vertex_fmt)
-        if vertex_size != header.vertex_width * 4:
-            return {'CANCELLED'}
+            # Read header
+            header = nvx2.Header._make(struct.unpack('<4s6i', f.read(28)))
+            vertex_fmt = make_vertexformat(header.vertex_components)
+            if not vertex_fmt:
+                operator.report({'ERROR'}, "Invalid vertex format " + str(vertex_fmt))
+                print("Invalid vertex format " + str(vertex_fmt))
+                return {'CANCELLED'}
 
-        # Read "groups" = objects
-        nvx2_groups = [nvx2.Group._make(struct.unpack('<6i', f.read(24)))
-                       for i in range(header.num_groups)]
-        # Geometry data (for ALL objects in the file)
-        vertex_data = [struct.unpack(vertex_fmt, f.read(vertex_size))
-                       for i in range(header.num_vertices)]
-        nvx2_vertices, nvx2_uvlayers, nvx2_weights, nvx2_weight_idx, nvx2_colors = \
-            unpack_vertexdata(vertex_data, header.vertex_components)
-        nvx2_faces = [list(struct.unpack('<3H', f.read(6)))
-                      for i in range(header.num_triangles)]
+            vertex_size = struct.calcsize(vertex_fmt)
+            if vertex_size != header.vertex_width * 4:
+                operator.report({'ERROR'}, "Invalid vertex format size " + str(vertex_size) + ", expected " + str(header.vertex_width * 4))
+                print("Invalid vertex format size " + str(vertex_size) + ", expected " + str(header.vertex_width * 4))
+                return {'CANCELLED'}
 
-        parent_empty = None
-        if options.create_parent_empty:
-            parent_empty = bpy.data.objects.new(filename, None)
-            parent_empty.location = (0.0, 0.0, 0.0)
-            collection.objects.link(parent_empty)
+            # Read "groups" = objects
+            nvx2_groups = [nvx2.Group._make(struct.unpack('<6i', f.read(24)))
+                        for i in range(header.num_groups)]
+            if not nvx2_groups:
+                operator.report({'ERROR'}, "File does not contain groups.")
+                print("File does not contain groups.")
+                return {'CANCELLED'}
 
-        # Create objects
-        for i, g in enumerate(nvx2_groups):
-            gvf = g.vertex_first
-            gtf = g.triangle_first
-            gtc = g.triangle_count
-            # Get vertex data for this object
-            grp_faces = [[vid-gvf for vid in f] for f in nvx2_faces[gtf:gtf+gtc]]
-            grp_verts = nvx2_vertices[gvf:gvf+g.vertex_count]
-            grp_uvs = [uvl[gvf:gvf+g.vertex_count] for uvl in nvx2_uvlayers]
-            grp_colors = nvx2_colors[gvf:gvf+g.vertex_count]
-            # Create the blender objects
-            mesh = create_mesh(grp_verts, grp_faces, grp_uvs, grp_colors, options)
-            obj = bpy.data.objects.new('nvx2_object', mesh)
-            if options.create_weights and nvx2_weights and nvx2_weight_idx:
-                create_weights(obj,
-                               nvx2_weights[gvf:gvf+g.vertex_count],
-                               nvx2_weight_idx[gvf:gvf+g.vertex_count])
+            # Geometry data (for ALL objects in the file)
+            vertex_data = [struct.unpack(vertex_fmt, f.read(vertex_size))
+                           for i in range(header.num_vertices)]
+            nvx2_vertices, nvx2_uvlayers, nvx2_weights, nvx2_weight_idx, nvx2_colors = \
+                unpack_vertexdata(vertex_data, header.vertex_components)
+            nvx2_faces = [list(struct.unpack('<3H', f.read(6)))
+                          for i in range(header.num_triangles)]
 
-            if parent_empty:
-                obj.parent = parent_empty
-            collection.objects.link(obj)
+            parent_empty = None
+            if options.create_parent_empty:
+                parent_empty = bpy.data.objects.new(filename, None)
+                parent_empty.location = (0.0, 0.0, 0.0)
+                collection.objects.link(parent_empty)
+
+            # Create objects
+            for i, g in enumerate(nvx2_groups):
+                gvf = g.vertex_first
+                gtf = g.triangle_first
+                gtc = g.triangle_count
+                # Get vertex data for this object
+                grp_faces = [[vid-gvf for vid in f] for f in nvx2_faces[gtf:gtf+gtc]]
+                grp_verts = nvx2_vertices[gvf:gvf+g.vertex_count]
+                grp_uvs = [uvl[gvf:gvf+g.vertex_count] for uvl in nvx2_uvlayers]
+                grp_colors = nvx2_colors[gvf:gvf+g.vertex_count]
+                # Create the blender objects
+                mesh = create_mesh(grp_verts, grp_faces, grp_uvs, grp_colors, options)
+                obj = bpy.data.objects.new('nvx2_object', mesh)
+                if options.create_weights and nvx2_weights and nvx2_weight_idx:
+                    create_weights(obj,
+                                nvx2_weights[gvf:gvf+g.vertex_count],
+                                nvx2_weight_idx[gvf:gvf+g.vertex_count])
+                # Link new object to scene/collection
+                if parent_empty:
+                    obj.parent = parent_empty
+                collection.objects.link(obj)
 
     return {'FINISHED'}
