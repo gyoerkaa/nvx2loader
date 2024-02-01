@@ -232,7 +232,7 @@ def create_mesh(nvx2_vertices, nvx2_faces, nvx2_uvlayers, nvx2_colors, options: 
                     blen_colors.data[lidx].color = nvx2_colors[vidx][0:3]
 
     if options.use_mesh_validation:
-        blen_mesh.validate(verbose=True, clean_customdata=False)
+        blen_mesh.validate(verbose=False, clean_customdata=False)
 
     blen_mesh.update()
     return blen_mesh
