@@ -36,14 +36,12 @@ from . import import_n3
 bl_info = {
     "name": "nvx2loader",
     "author": "Attila Gyoerkoes",
-    'version': (2, 0),
-    "blender": (4, 0, 1),
+    'version': (2, 1),
+    "blender": (4, 0, 0),
     "location": "File > Import-Export",
     "description": "Import Nebula NVX files",
     "warning": "",
-    "wiki_url": ""
-                "",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/gyoerkaa/nvx2loader",
     "category": "Import-Export"}
 
 
