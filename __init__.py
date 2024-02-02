@@ -19,6 +19,10 @@
 
 """TODO: DOC."""
 
+
+import os
+import importlib
+
 import bpy
 import bpy_extras
 
@@ -28,24 +32,12 @@ from . import import_nax
 from . import n3
 from . import import_n3
 
-# Enables the use of reloading the entire addon without restarting blender
-if 'bpy' in locals():
-    # Doing this in here: Importing this twice will result in an error
-    import importlib
-    # Checking for nvx2 is enough, if present: Everything is loaded, reload
-    if 'nvx2' in locals():
-        importlib.reload(nvx2)
-        importlib.reload(import_nvx2)
-        importlib.reload(import_nax)
-        importlib.reload(n3)
-        importlib.reload(import_n3)
-
 
 bl_info = {
     "name": "nvx2loader",
     "author": "Attila Gyoerkoes",
     'version': (2, 0),
-    "blender": (4, 0, 0),
+    "blender": (4, 0, 1),
     "location": "File > Import-Export",
     "description": "Import Nebula NVX files",
     "warning": "",
@@ -53,6 +45,19 @@ bl_info = {
                 "",
     "tracker_url": "",
     "category": "Import-Export"}
+
+
+def reload_package():
+    """Enables reloading the entire add-on with 'Reload Scripts' from Blender"""
+    importlib.reload(nvx2)
+    importlib.reload(import_nvx2)
+    importlib.reload(n3)
+    importlib.reload(import_n3)
+    importlib.reload(import_nax)
+
+
+if "bpy" in locals():
+    reload_package()
 
 
 class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
@@ -63,10 +68,14 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
     filename_ext = ".nvx2"
     filter_glob : bpy.props.StringProperty(default="*.nvx2", options={'HIDDEN'})
+    files: bpy.props.CollectionProperty(
+        name='File Path',
+        description='Path used for importing the file',
+        type=bpy.types.OperatorFileListElement)
 
     nvx2_version : bpy.props.EnumProperty(
             name="Engine Version",
-            description="Nebula Engine version this file was packed for",
+            description="Nebula version this file was packed for",
             items=(('0', "Auto Detect", "", 0),
                    ('2', "Nebula 2", "", 2),
                    ('3', "Nebula 3", "", 3)),
@@ -92,7 +101,8 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             description="Creates colors weights",
             default=False)
 
-    def execute(self, context):
+    def import_file(self, context, filepath):
+        """Imports a single nvx2 file"""
         options = nvx2.Options()
         options.use_smooth = self.use_smooth
         options.create_parent_empty  = self.create_parent_empty
@@ -100,10 +110,24 @@ class ImportNVX2(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         options.create_weights  = self.create_weights
         options.create_colors = self.create_colors
 
-        options.nvx2filepath = self.filepath
+        options.nvx2filepath = filepath
         options.nvx2version = int(self.nvx2_version)
 
         return import_nvx2.load(context, self, options)
+
+    def execute(self, context):
+        # Multiple file import
+        if self.files:
+            ret = {'CANCELLED'}
+            dirname = os.path.dirname(self.filepath)
+            for file in self.files:
+                path = os.path.join(dirname, file.name)
+                if self.import_file(context, path) == {'FINISHED'}:
+                    ret = {'FINISHED'}
+            return ret
+
+        # Single file import
+        return self.import_file(context, self.filepath)
 
 
 class ImportNAX(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
