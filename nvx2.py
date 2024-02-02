@@ -11,7 +11,7 @@ class Options:
     use_smooth: bool = False
     use_mesh_validation: bool = True
     create_parent_empty: bool = True
-    create_uvs: bool = False,
+    create_uvs: bool = True
     create_weights: bool = True
     create_colors: bool = False
     nvx2filepath: str = ""
